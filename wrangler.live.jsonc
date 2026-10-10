@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hivecore-local",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-10-01",
+  "workers_dev": false,
+  "vars": {
+    "APP_MODE": "local",
+    "LIVE_RESEARCH_ENABLED": "false",
+    "FREE_PLAN_CONFIRMED": "false",
+  },
+  "ai": { "binding": "AI", "remote": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hivecore-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

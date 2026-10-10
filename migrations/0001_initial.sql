@@ -1,0 +1,10 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE users (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+INSERT INTO users (id, display_name) VALUES ('local-user', 'Local researcher');
+CREATE TABLE agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, provider TEXT NOT NULL DEFAULT 'demo', is_demo INTEGER NOT NULL DEFAULT 1 CHECK(is_demo IN (0,1)));
+CREATE TABLE missions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL CHECK(length(title) BETWEEN 3 AND 120), objective TEXT NOT NULL CHECK(length(objective) BETWEEN 10 AND 2000), category TEXT NOT NULL CHECK(category IN ('Technology','Science','Climate','Society')), status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','queued','running','completed','failed')), created_at TEXT NOT NULL);
+CREATE INDEX missions_by_user ON missions(user_id, created_at DESC);
+CREATE TABLE mission_agents (mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE, agent_id TEXT NOT NULL REFERENCES agents(id), PRIMARY KEY(mission_id,agent_id));
+CREATE TABLE sources (id TEXT PRIMARY KEY, mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE, url TEXT NOT NULL, title TEXT NOT NULL, retrieved_at TEXT NOT NULL, is_demo INTEGER NOT NULL DEFAULT 1 CHECK(is_demo IN (0,1)));
+CREATE TABLE evidence (id TEXT PRIMARY KEY, mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE, source_id TEXT NOT NULL REFERENCES sources(id), claim TEXT NOT NULL, verdict TEXT NOT NULL CHECK(verdict IN ('unverified','supported','disputed')), reasoning TEXT, is_demo INTEGER NOT NULL DEFAULT 1 CHECK(is_demo IN (0,1)));
+CREATE TABLE reports (id TEXT PRIMARY KEY, mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE, title TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, is_demo INTEGER NOT NULL DEFAULT 1 CHECK(is_demo IN (0,1)));
