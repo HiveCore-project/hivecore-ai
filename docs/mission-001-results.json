@@ -1,0 +1,144 @@
+{
+  "mission": {
+    "id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+    "title": "Flywheel energy storage — first live test",
+    "objective": "Explain how flywheel energy storage works using only the retrieved Wikipedia article. Identify the support for each finding, distinguish claims from evidence, and state limitations and uncertainties.",
+    "status": "completed",
+    "started_at": "2026-10-10T19:13:36.317Z",
+    "finished_at": "2026-10-10T19:14:17.024Z",
+    "error": null
+  },
+  "sources": [
+    {
+      "id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "url": "https://en.wikipedia.org/wiki/Flywheel_energy_storage",
+      "title": "Flywheel energy storage - Wikipedia",
+      "retrieved_at": "2026-10-10T19:13:37.631Z",
+      "is_demo": 0,
+      "excerpt": "Flywheel energy storage (FES) works by spinning a rotor (flywheel) and maintaining the energy in the system as rotational energy. When energy is extracted from the system, the flywheel's rotational speed is reduced as a consequence of the principle of conservation of energy; adding energy to the system correspondingly results in an increase in the speed of the flywheel. While some systems use low mass/high speed rotors, other use very massive rotors (e.g., 200 tonnes)[1][2] and correspondingly much lower rotational speeds, referred to as grid-scale flywheel energy storage.[3] Other designs employ high-speed rotors that operate at tens of thousands of revolutions per minute.[4]\nMost FES systems use electricity to accelerate and decelerate the flywheel, but devices that directly use mechanical energy are being developed.[why?][5]\nAdvanced FES systems have rotors made of high strength carbon-fiber composites, suspended by magnetic bearings, and spinning at speeds from 20,000 to over 50,000 rpm in a vacuum enclosure.[6] Such flywheels can come up to speed in a matter of minutes – reaching their energy capacity much more quickly than some other forms of storage.[6]\nA typical system consists of a flywheel supported by rolling-element bearing connected to a motor–generator. The flywheel and sometimes motor–generator may be enclosed in a vacuum chamber to reduce friction and energy loss.\nFirst-generation flywheel energy-storage systems use a large steel flywheel rotating on mechanical bearings. Newer systems use carbon-fiber composite rotors that have a higher tensile strength than steel and can store much more energy for the same mass.[7]\nTo reduce friction, magnetic bearings are sometimes used instead of mechanical bearings.\nThe expense of refrigeration led to the early dismissal of low-temperature superconductors for use in magnetic bearings. However, high-temperature superconductor (HTSC) bearings may be economical and could possibly extend the time energy could be stored economically.[8] Hybrid bearing systems are most likely to see use first. High-temperature superconductor bearings have historically had problems providing the lifting forces necessary for the larger designs but can easily provide a stabilizing force. Therefore, in hybrid bearings, permanent magnets support the load and high-temperature superconductors are used to stabilize it. The reason superconductors can work well stabilizing the load is because they are perfect diamagnets. If the rotor tries to drift off-center, a restoring force due to flux pinning restores it. This is known as the magnetic stiffness of the bearing. Rotational axis vibration can occur due to low stiffness and damping, which are inherent problems of superconducting magnets, preventing the use of completely superconducting magnetic bearings for flywheel applications.\nSince flux pinning is an important factor for providing the stabilizing and lifting force, the HTSC can be made much more easily for flywheel energy storage than for other uses. HTSC powders can be formed into arbitrary shapes so long as flux pinning is strong. An ongoing challenge that has to be overcome before superconductors can provide the full lifting force for an FES system is finding a way to suppress the decrease of levitation force and the gradual fall of rotor during operation caused by the flux creep of the superconducting material.\nCompared with other ways to store electricity, FES systems have long lifetimes (lasting decades with little or no maintenance;[6][9] full-cycle lifetimes quoted for flywheels range from in excess of 105, up to 107, cycles of use),[10] high specific energy (100–130 W·h/kg, or 360–500 kJ/kg),[10][11] and large maximum power output. The energy efficiency (ratio of energy out per energy in) of flywheels, also known as round-trip efficiency, can be as high as 90%. Typical capacities range from 3 kWh to 133 kWh.[6] Rapid charging of a system occurs in less than 15 minutes.[12] The high specific energies often cited with flywheels can be misleading as commercial systems built have much lower specific energy, for example 11 W·h/kg, or 40 kJ/kg.[13]\nHere m {\\displaystyle m} is the integral of the flywheel's mass, and n m {\\displaystyle n_{m}} is the rotational speed (number of revolutions per second).\nThe maximal specific energy of a flywheel rotor is mainly dependent on two factors: the first being the rotor's geometry, and the second being the properties of the material being used. For s",
+      "content_hash": "f6e456a0600633ecc76594946815eaa37f8a5ebab490d67ac2457afeb3776b17"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "73b5b4e4-4d08-4a97-9062-76f5d8609c17",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "source_id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "claim": "Commercial flywheel systems have lower specific energy than theoretical maximums, with examples including 11 W·h/kg or 40 kJ/kg.",
+      "verdict": "supported",
+      "reasoning": "The source text provides specific examples of commercial systems (11 W·h/kg or 40 kJ/kg) to illustrate that cited specific energies can be misleading.",
+      "is_demo": 0,
+      "excerpt": "The high specific energies often cited with flywheels can be misleading as commercial systems built have much lower specific energy, for example 11 W·h/kg, or 40 kJ/kg."
+    },
+    {
+      "id": "72b2dfc4-7001-4281-a7d2-6d295be45ee6",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "source_id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "claim": "The maximal specific energy of a flywheel rotor depends on rotor geometry and material properties.",
+      "verdict": "supported",
+      "reasoning": "The text identifies rotor geometry and material properties as the two main factors dependent on for maximal specific energy.",
+      "is_demo": 0,
+      "excerpt": "The maximal specific energy of a flywheel rotor is mainly dependent on two factors: the first being the rotor's geometry, and the second being the properties of the material being used."
+    },
+    {
+      "id": "21805b8c-913d-4a09-a9f3-913201273201",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "source_id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "claim": "Advanced FES systems use high-strength carbon-fiber composite rotors, magnetic bearings, and operate at speeds between 20,000 and over 50,000 rpm in vacuum enclosures.",
+      "verdict": "supported",
+      "reasoning": "The source text describes advanced systems using carbon-fiber composites, magnetic bearings, and operating at 20,000 to over 50,000 rpm in vacuum enclosures.",
+      "is_demo": 0,
+      "excerpt": "Advanced FES systems have rotors made of high strength carbon-fiber composites, suspended by magnetic bearings, and spinning at speeds from 20,000 to over 50,000 rpm in a vacuum enclosure."
+    },
+    {
+      "id": "3c0fc6b5-74fb-494b-a51d-271a78407bea",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "source_id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "claim": "Energy extraction from the system reduces the flywheel's rotational speed, while adding energy increases it, based on the principle of conservation of energy.",
+      "verdict": "supported",
+      "reasoning": "The text explicitly links energy extraction to reduced rotational speed and energy addition to increased speed, citing the principle of conservation of energy.",
+      "is_demo": 0,
+      "excerpt": "When energy is extracted from the system, the flywheel's rotational speed is reduced as a consequence of the principle of conservation of energy; adding energy to the system correspondingly results in an increase in the speed of the flywheel."
+    },
+    {
+      "id": "9c9aaffd-8587-4611-b2f8-da7629afb377",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "source_id": "aae0632a-1abe-49d3-b7bc-5fe60665f866",
+      "claim": "Flywheel energy storage (FES) systems store energy as rotational kinetic energy within a spinning rotor.",
+      "verdict": "supported",
+      "reasoning": "The source text explicitly states that FES works by spinning a rotor and maintaining energy as rotational energy, directly supporting the claim.",
+      "is_demo": 0,
+      "excerpt": "Flywheel energy storage (FES) works by spinning a rotor (flywheel) and maintaining the energy in the system as rotational energy."
+    }
+  ],
+  "reports": [
+    {
+      "id": "e358ebbc-9dd5-4e92-952e-802a65d27cb8",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "title": "Flywheel energy storage — first live test",
+      "body": "Flywheel energy storage systems store energy as rotational kinetic energy within a spinning rotor. Energy extraction reduces the rotor's speed, while adding energy increases it, governed by the principle of conservation of energy. Advanced systems utilize high-strength carbon-fiber composite rotors, magnetic bearings, and operate at high speeds (20,000 to over 50,000 rpm) within vacuum enclosures. The maximal specific energy of a rotor is determined by its geometry and material properties. However, commercial systems exhibit lower specific energy than theoretical maximums, with examples such as 11 W·h/kg or 40 kJ/kg.\n\n\nFindings\n\nFlywheel energy storage (FES) systems store energy as rotational kinetic energy within a spinning rotor. [1] (supported; AI assessment)\n\nEnergy extraction from the system reduces the flywheel's rotational speed, while adding energy increases it, based on the principle of conservation of energy. [1] (supported; AI assessment)\n\nAdvanced FES systems use high-strength carbon-fiber composite rotors, magnetic bearings, and operate at speeds between 20,000 and over 50,000 rpm in vacuum enclosures. [1] (supported; AI assessment)\n\nThe maximal specific energy of a flywheel rotor depends on rotor geometry and material properties. [1] (supported; AI assessment)\n\nCommercial flywheel systems have lower specific energy than theoretical maximums, with examples including 11 W·h/kg or 40 kJ/kg. [1] (supported; AI assessment)\n\n\nEvidence review\n\n1. Flywheel energy storage (FES) systems store energy as rotational kinetic energy within a spinning rotor.\nQuote: “Flywheel energy storage (FES) works by spinning a rotor (flywheel) and maintaining the energy in the system as rotational energy.”\nAssessment: supported — The source text explicitly states that FES works by spinning a rotor and maintaining energy as rotational energy, directly supporting the claim. [1]\n\n2. Energy extraction from the system reduces the flywheel's rotational speed, while adding energy increases it, based on the principle of conservation of energy.\nQuote: “When energy is extracted from the system, the flywheel's rotational speed is reduced as a consequence of the principle of conservation of energy; adding energy to the system correspondingly results in an increase in the speed of the flywheel.”\nAssessment: supported — The text explicitly links energy extraction to reduced rotational speed and energy addition to increased speed, citing the principle of conservation of energy. [1]\n\n3. Advanced FES systems use high-strength carbon-fiber composite rotors, magnetic bearings, and operate at speeds between 20,000 and over 50,000 rpm in vacuum enclosures.\nQuote: “Advanced FES systems have rotors made of high strength carbon-fiber composites, suspended by magnetic bearings, and spinning at speeds from 20,000 to over 50,000 rpm in a vacuum enclosure.”\nAssessment: supported — The source text describes advanced systems using carbon-fiber composites, magnetic bearings, and operating at 20,000 to over 50,000 rpm in vacuum enclosures. [1]\n\n4. The maximal specific energy of a flywheel rotor depends on rotor geometry and material properties.\nQuote: “The maximal specific energy of a flywheel rotor is mainly dependent on two factors: the first being the rotor's geometry, and the second being the properties of the material being used.”\nAssessment: supported — The text identifies rotor geometry and material properties as the two main factors dependent on for maximal specific energy. [1]\n\n5. Commercial flywheel systems have lower specific energy than theoretical maximums, with examples including 11 W·h/kg or 40 kJ/kg.\nQuote: “The high specific energies often cited with flywheels can be misleading as commercial systems built have much lower specific energy, for example 11 W·h/kg, or 40 kJ/kg.”\nAssessment: supported — The source text provides specific examples of commercial systems (11 W·h/kg or 40 kJ/kg) to illustrate that cited specific energies can be misleading. [1]\n\n\nUncertainty and limitations\n\n• The provided text does not specify the exact relationship between rotor geometry and material properties regarding specific energy values, only stating they are the main dependent factors.\n\n• The text does not provide a theoretical maximum specific energy value to compare against the commercial examples.\n\n• The text does not explain the specific mechanisms or materials used in non-advanced flywheel systems.\n\n• The text does not provide data on the efficiency or lifespan of these systems.\n\n• The text does not mention the specific applications or contexts in which these commercial systems are deployed.\n\n• AI-assisted synthesis, not independently verified truth. Wikipedia sources may share errors; agreement is not independent corroboration. Only bounded article excerpts were reviewed.\n\n\nSources (Wikipedia contributors; see each article for revision history and licensing)\n\n[1] Flywheel energy storage - Wikipedia\nhttps://en.wikipedia.org/wiki/Flywheel_energy_storage\nRetrieved: 2026-10-10T19:13:37.631Z\nExcerpt SHA-256: f6e456a0600633ecc76594946815eaa37f8a5ebab490d67ac2457afeb3776b17\n\n\nGenerated: 2026-10-10T19:14:17.024Z\nModel: @cf/zai-org/glm-4.7-flash",
+      "created_at": "2026-10-10T19:14:17.024Z",
+      "is_demo": 0
+    }
+  ],
+  "activity": [
+    {
+      "id": "9299bf7c-2abc-472d-a208-fcc2747105d2",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "SYNTHESIZER",
+      "message": "Research report saved; human review recommended.",
+      "created_at": "2026-10-10T19:14:17.025Z"
+    },
+    {
+      "id": "528580ad-2ac3-4ab5-83e5-ea2fe9cbd313",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "SYNTHESIZER",
+      "message": "Composing a report with validated evidence references.",
+      "created_at": "2026-10-10T19:14:08.86Z"
+    },
+    {
+      "id": "7d21ca81-df7f-4d18-8d25-d79a2b1ffdde",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "SKEPTIC",
+      "message": "Evidence review saved. Verdicts are AI assessments, not independent verification.",
+      "created_at": "2026-10-10T19:14:08.858Z"
+    },
+    {
+      "id": "80e101ca-9eed-47c2-a359-ac33e764868b",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "SKEPTIC",
+      "message": "Reviewing support, contradictions and weak claims.",
+      "created_at": "2026-10-10T19:14:01.632Z"
+    },
+    {
+      "id": "1a644441-b99d-4947-a3a8-d23c406f3567",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "EXPLORER",
+      "message": "Saved 5 source-grounded findings.",
+      "created_at": "2026-10-10T19:14:01.631Z"
+    },
+    {
+      "id": "9ee61a69-9f91-448b-9a7f-434eaf38d232",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "EXPLORER",
+      "message": "Extracting grounded findings from retrieved excerpts.",
+      "created_at": "2026-10-10T19:13:37.638Z"
+    },
+    {
+      "id": "5d22080b-b62f-4ff2-a395-531942a29102",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "EXPLORER",
+      "message": "Retrieved source 1: https://en.wikipedia.org/wiki/Flywheel_energy_storage",
+      "created_at": "2026-10-10T19:13:37.636Z"
+    },
+    {
+      "id": "3aae2c61-5872-4d1e-a5f4-3cd636455713",
+      "mission_id": "5b568225-a62b-4ee5-a554-dbef9adba210",
+      "agent": "EXPLORER",
+      "message": "Started permitted-source retrieval.",
+      "created_at": "2026-10-10T19:13:36.32Z"
+    }
+  ],
+  "liveEnabled": false
+}
