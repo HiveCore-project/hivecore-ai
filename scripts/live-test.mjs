@@ -1,5 +1,6 @@
 // Never included in npm test. This script is intentionally inert without opt-in.
 import assert from "node:assert/strict";
+import missionInput from "./live-mission.json" with { type: "json" };
 if (process.env.HIVECORE_LIVE_TEST !== "I_APPROVE_ONE_REAL_MISSION") {
   console.error(
     "Not run. Obtain explicit approval first, confirm Workers Free, then follow docs/PHASE_2A.md.",
@@ -12,13 +13,7 @@ assert.equal(state.enabled, true, state.reason);
 const response = await fetch(`${base}/api/missions`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    title: "Energy storage — first live test",
-    objective:
-      "Explain what energy storage means using only the retrieved article. State evidence limitations and uncertainties.",
-    category: "Technology",
-    sourceUrls: ["https://en.wikipedia.org/wiki/Energy_storage"],
-  }),
+  body: JSON.stringify(missionInput),
 });
 assert.equal(response.status, 201);
 const { mission } = await response.json();

@@ -89,7 +89,7 @@ npm run test:live
 Remove-Item Env:HIVECORE_LIVE_TEST
 ```
 
-The script creates one Energy storage mission with one explicit Wikipedia source, starts it exactly once, and asserts completion and a saved report. The approval is consumed even if retrieval/AI fails. Inspect its citations and quota usage; any new mission requires a new approval. Do not rotate the ID to retry without approval.
+The script creates the single Flywheel energy storage mission defined in `scripts/live-mission.json`, starts it exactly once, and asserts completion and a saved report. The original broad Energy storage article exceeded the 750,000-byte cap during preparation; the narrower article passed the same cap. The approval is consumed even if retrieval/AI fails. Inspect its citations and quota usage; any new mission requires a new approval. Do not rotate the ID to retry without approval.
 
 6. Stop `dev:live`, remove the live-enabling entries from `.dev.vars`, and return to `npm run dev`. Preserve the D1 state and consumed approval record. Report real outcome and usage without calling a failed test successful.
 
