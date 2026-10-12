@@ -101,18 +101,39 @@ export function formatReport(
 ): string {
   const sourceNumber = (id: string) =>
     sources.findIndex((source) => source.id === id) + 1;
+  const citations = (indexes: number[]) =>
+    indexes
+      .map((i) => {
+        const ids = [
+          ...new Set([
+            findings[i].sourceId,
+            ...reviews[i].evidence.map((e) => e.sourceId),
+          ]),
+        ];
+        return (
+          ids.map((id) => "[" + sourceNumber(id) + "]").join(" ") +
+          " (" +
+          reviews[i].verdict +
+          "; AI assessment)"
+        );
+      })
+      .join(" ");
   return [
-    body.summary,
+    body.summary + " " + citations(body.summaryEvidenceIndexes),
     "\nFindings",
-    ...body.findings.map(
-      (f) =>
-        `${f.text} ${f.evidenceIndexes.map((i) => `[${sourceNumber(findings[i].sourceId)}] (${reviews[i].verdict}; AI assessment)`).join(" ")}`,
-    ),
+    ...body.findings.map((f) => `${f.text} ${citations(f.evidenceIndexes)}`),
     "\nEvidence review",
     ...findings.map(
       (finding, i) =>
         `${i + 1}. ${finding.claim}\nQuote: “${finding.excerpt}”\nAssessment: ${reviews[i].verdict} — ${reviews[i].reasoning} [${sourceNumber(finding.sourceId)}]`,
     ),
+    ...reviews.flatMap((r, i) => [
+      `Claim ${i + 1}: ${r.supportScope}; further research: ${r.needsResearch ? "needed" : "human review still required"}. Model verdict: ${r.modelVerdict}. ${r.flags.join(" ")}`,
+      ...r.evidence.map(
+        (e) =>
+          `${e.relation}: “${e.excerpt}” [${sourceNumber(e.sourceId)}]; retained excerpt offsets ${e.start}–${e.end} (UTF-16, end exclusive).`,
+      ),
+    ]),
     "\nUncertainty and limitations",
     ...body.uncertainty.map((s) => `• ${s}`),
     "• AI-assisted synthesis, not independently verified truth. Wikipedia sources may share errors; agreement is not independent corroboration. Only bounded article excerpts were reviewed.",
@@ -175,7 +196,21 @@ export async function runResearch(
         );
     };
     const provider =
-      deps?.provider || new WorkersAIProvider(env.AI!, reserveCall);
+      deps?.provider ||
+      new WorkersAIProvider(env.AI!, reserveCall, async (usage) => {
+        await env.DB.prepare(
+          "INSERT INTO ai_usage(run_id,role,status,prompt_tokens,completion_tokens,total_tokens) VALUES(?,?,?,?,?,?) ON CONFLICT(run_id,role) DO UPDATE SET status=excluded.status,prompt_tokens=excluded.prompt_tokens,completion_tokens=excluded.completion_tokens,total_tokens=excluded.total_tokens,recorded_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+        )
+          .bind(
+            runId,
+            usage.role,
+            usage.status,
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            usage.total_tokens,
+          )
+          .run();
+      });
     await event(
       env.DB,
       mission.id,
@@ -195,15 +230,39 @@ export async function runResearch(
     await env.DB.batch(
       findings.map((f, i) =>
         env.DB.prepare(
-          "INSERT INTO evidence(id,mission_id,source_id,claim,verdict,reasoning,is_demo,excerpt) VALUES(?,?,?,?,'unverified','Awaiting skeptic review',0,?)",
-        ).bind(evidenceIds[i], mission.id, f.sourceId, f.claim, f.excerpt),
+          "INSERT INTO evidence(id,mission_id,source_id,claim,verdict,reasoning,is_demo,excerpt,explorer_flags) VALUES(?,?,?,?,'unverified','Awaiting skeptic review',0,?,?)",
+        ).bind(
+          evidenceIds[i],
+          mission.id,
+          f.sourceId,
+          f.claim,
+          f.excerpt,
+          JSON.stringify(f.flags || []),
+        ),
       ),
+    );
+    await env.DB.batch(
+      findings.map((f, i) => {
+        const start = sources
+          .find((s) => s.id === f.sourceId)!
+          .excerpt.indexOf(f.excerpt);
+        return env.DB.prepare(
+          "INSERT INTO claim_source_links(id,evidence_id,source_id,relation,excerpt,start_offset,end_offset) VALUES(?,?,?,'context',?,?,?)",
+        ).bind(
+          crypto.randomUUID(),
+          evidenceIds[i],
+          f.sourceId,
+          f.excerpt,
+          start,
+          start + f.excerpt.length,
+        );
+      }),
     );
     await event(
       env.DB,
       mission.id,
       "EXPLORER",
-      `Saved ${findings.length} source-grounded findings.`,
+      `Saved ${findings.length} quoted findings; entailment still requires review.`,
     );
     await event(
       env.DB,
@@ -218,14 +277,36 @@ export async function runResearch(
         signal,
       ),
       findings,
+      sources,
     );
     signal.throwIfAborted();
     await env.DB.batch(
-      reviews.map((review) =>
+      reviews.flatMap((review) => [
         env.DB.prepare(
-          "UPDATE evidence SET verdict=?,reasoning=? WHERE id=?",
-        ).bind(review.verdict, review.reasoning, evidenceIds[review.index]),
-      ),
+          "INSERT INTO claim_assessments(evidence_id,verdict,model_verdict,reasoning,flags,support_scope,needs_research) VALUES(?,?,?,?,?,?,?)",
+        ).bind(
+          evidenceIds[review.index],
+          review.verdict,
+          review.modelVerdict,
+          review.reasoning,
+          JSON.stringify(review.flags),
+          review.supportScope,
+          Number(review.needsResearch),
+        ),
+        ...review.evidence.map((link) =>
+          env.DB.prepare(
+            "INSERT INTO claim_source_links(id,evidence_id,source_id,relation,excerpt,start_offset,end_offset) VALUES(?,?,?,?,?,?,?)",
+          ).bind(
+            crypto.randomUUID(),
+            evidenceIds[review.index],
+            link.sourceId,
+            link.relation,
+            link.excerpt,
+            link.start,
+            link.end,
+          ),
+        ),
+      ]),
     );
     await event(
       env.DB,
@@ -242,10 +323,11 @@ export async function runResearch(
     const report = validateReport(
       await provider.run(
         "SYNTHESIZER",
-        { objective: mission.objective, findings, reviews },
+        { objective: mission.objective, sources, findings, reviews },
         signal,
       ),
       findings,
+      reviews,
     );
     signal.throwIfAborted();
     const timestamp = new Date().toISOString();

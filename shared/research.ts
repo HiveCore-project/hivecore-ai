@@ -24,14 +24,31 @@ export interface Finding {
   sourceId: string;
   claim: string;
   excerpt: string;
+  flags?: string[];
+}
+export interface EvidenceLink {
+  sourceId: string;
+  relation: "supporting" | "opposing" | "context";
+  excerpt: string;
+  start: number;
+  end: number;
 }
 export interface Review {
   index: number;
-  verdict: "unverified" | "supported" | "disputed";
+  verdict: "unverified" | "supported" | "contradicted" | "partially_supported";
   reasoning: string;
+  modelVerdict: Review["verdict"];
+  flags: string[];
+  evidence: EvidenceLink[];
+  supportScope:
+    | "single_source"
+    | "multiple_sources_not_independently_verified"
+    | "no_support";
+  needsResearch: boolean;
 }
 export interface ReportBody {
   summary: string;
+  summaryEvidenceIndexes: number[];
   findings: { text: string; evidenceIndexes: number[] }[];
   uncertainty: string[];
 }
@@ -50,6 +67,21 @@ export interface ResearchSnapshot {
     excerpt: string;
     verdict: string;
     reasoning: string;
+    assessment_version?: string | null;
+    model_verdict?: string | null;
+    flags?: string | null;
+    support_scope?: string | null;
+    needs_research?: number | null;
+  }[];
+  links: (EvidenceLink & { evidence_id: string })[];
+  usage: {
+    mission_id: string;
+    ai_calls: number;
+    role: string | null;
+    status: string | null;
+    prompt_tokens: number | null;
+    completion_tokens: number | null;
+    total_tokens: number | null;
   }[];
   reports: {
     id: string;

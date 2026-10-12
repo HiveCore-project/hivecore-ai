@@ -5,7 +5,9 @@ import {
   type Review,
   type ReportBody,
   type Source,
+  type EvidenceLink,
 } from "../shared/research";
+import { claimFlags, reportWarnings } from "./quality";
 import { ResearchError } from "./retrieval";
 
 export interface RoleProvider {
@@ -17,16 +19,41 @@ export interface RoleProvider {
 }
 const schemas = {
   EXPLORER:
-    'Return {"findings":[{"sourceId":"exact source id","claim":"one factual claim","excerpt":"exact contiguous quote from source text"}]}. Use 1–5 findings; quote 20–500 characters each. No URLs, no invented evidence.',
+    'Return {"findings":[{"sourceId":"exact source id","claim":"one factual claim","excerpt":"exact contiguous quote from source text"}]}. Use 1–5 atomic findings; quote 20–500 characters each. Preserve numerical units, comparisons and qualifiers exactly. Distinguish often-cited values from theoretical maxima. No URLs, no invented evidence.',
   SKEPTIC:
-    'Return {"reviews":[{"index":0,"verdict":"supported|disputed|unverified","reasoning":"explain support, contradiction or weakness"}]}. Review every finding exactly once using its zero-based index. Source support is not independent truth verification. Identify disagreements and limited evidence. No URLs.',
+    'Return {"reviews":[{"index":0,"verdict":"supported|contradicted|partially_supported|unverified","reasoning":"explain entailment, numerical values, units, comparisons, exaggerations and limitations","evidence":[{"sourceId":"exact id","relation":"supporting|opposing|context","excerpt":"exact 20–500 character contiguous source quote"}]}]}. Review every finding exactly once. Supply 1–3 relevant evidence spans per claim; contradicted requires opposing evidence, supported requires supporting evidence. A matching quote does not prove the claim. Check the entire retained excerpt, not only Explorer quotes. Wikipedia pages do not establish independent corroboration. No URLs.',
   SYNTHESIZER:
-    'Return {"summary":"short readable overview","findings":[{"text":"careful conclusion","evidenceIndexes":[0]}],"uncertainty":["limitations and contradictions"]}. Cite only provided zero-based finding indexes. Include 1–5 findings and 1–5 uncertainty statements. Preserve disputed and unverified qualifications. No URLs, no invented citations; the server supplies URLs.',
+    'Return {"summary":"careful overview","summaryEvidenceIndexes":[0],"findings":[{"text":"careful conclusion","evidenceIndexes":[0]}],"uncertainty":["scope and further research needed"]}. Cite only provided zero-based finding indexes for both summary and each conclusion. Include 1–5 findings and 1–5 uncertainty statements. Read the full original source excerpts. Do not assert that data is missing, not provided or absent; bounded excerpts cannot prove document absence. Preserve contradictions, partial support and unverified qualifications. Do not promote unsupported claims to facts. Do not use AI agreement as proof or claim independent corroboration. No URLs or inline citations; the server supplies URLs.',
 };
+export interface UsageRecord {
+  role: "EXPLORER" | "SKEPTIC" | "SYNTHESIZER";
+  status: "started" | "returned" | "failed";
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+}
+export function usageMetrics(value: unknown) {
+  const row =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  const metric = (name: string) =>
+    typeof row[name] === "number" &&
+    Number.isSafeInteger(row[name]) &&
+    Number(row[name]) >= 0
+      ? Number(row[name])
+      : null;
+  return {
+    prompt_tokens: metric("prompt_tokens"),
+    completion_tokens: metric("completion_tokens"),
+    total_tokens: metric("total_tokens"),
+  };
+}
 export class WorkersAIProvider implements RoleProvider {
   constructor(
     private ai: Ai,
     private reserveCall: () => Promise<void>,
+    private observe: (usage: UsageRecord) => Promise<void> = async () => {},
   ) {}
   async run(
     role: keyof typeof schemas,
@@ -51,6 +78,8 @@ export class WorkersAIProvider implements RoleProvider {
       throw new ResearchError("AI input exceeded the fixed size budget.");
     await this.reserveCall();
     signal.throwIfAborted();
+    let metrics = usageMetrics(null);
+    await this.observe({ role, status: "started", ...metrics });
     const controller = new AbortController();
     const combined = AbortSignal.any([signal, controller.signal]);
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -79,6 +108,8 @@ export class WorkersAIProvider implements RoleProvider {
           }, LIMITS.aiMs);
         }),
       ]);
+      metrics = usageMetrics((output as { usage?: unknown })?.usage);
+      await this.observe({ role, status: "returned", ...metrics });
       signal.throwIfAborted();
       const result = output as {
         choices?: {
@@ -103,6 +134,7 @@ export class WorkersAIProvider implements RoleProvider {
         throw new ResearchError("AI returned invalid JSON; no retry was made.");
       }
     } catch (error) {
+      await this.observe({ role, status: "failed", ...metrics });
       if (error instanceof ResearchError) throw error;
       throw new ResearchError(
         "Workers AI request failed or hit a quota. No automatic retry was made.",
@@ -152,29 +184,100 @@ export function validateFindings(value: unknown, sources: Source[]): Finding[] {
       sourceId: source.id,
       claim: text(row.claim, 600),
       excerpt: row.excerpt,
+      flags: claimFlags(text(row.claim, 600), row.excerpt),
     };
   });
 }
-export function validateReviews(value: unknown, findings: Finding[]): Review[] {
+export function validateReviews(
+  value: unknown,
+  findings: Finding[],
+  sources: Source[] = [],
+): Review[] {
   const rows = list(record(value).reviews);
   const seen = new Set<number>();
-  const reviews = rows.map((item) => {
+  const reviews = rows.map((item): Review => {
     const row = record(item);
+    const index = Number(row.index);
     if (
       !Number.isInteger(row.index) ||
-      Number(row.index) < 0 ||
-      Number(row.index) >= findings.length ||
-      seen.has(Number(row.index)) ||
-      !["supported", "disputed", "unverified"].includes(String(row.verdict))
+      index < 0 ||
+      index >= findings.length ||
+      seen.has(index) ||
+      ![
+        "supported",
+        "contradicted",
+        "partially_supported",
+        "unverified",
+      ].includes(String(row.verdict))
     )
       throw new ResearchError(
         "Skeptic returned an invalid evidence reference.",
       );
-    seen.add(Number(row.index));
+    seen.add(index);
+    const evidence = list(row.evidence, 3).map((item): EvidenceLink => {
+      const link = record(item);
+      const source = sources.find((s) => s.id === link.sourceId);
+      if (
+        !source ||
+        typeof link.excerpt !== "string" ||
+        link.excerpt.length < 20 ||
+        link.excerpt.length > 500 ||
+        !["supporting", "opposing", "context"].includes(String(link.relation))
+      )
+        throw new ResearchError(
+          "Skeptic returned an invalid source relationship.",
+        );
+      const start = source.excerpt.indexOf(link.excerpt);
+      if (start < 0)
+        throw new ResearchError("Skeptic quote absent from retained source.");
+      return {
+        sourceId: source.id,
+        relation: link.relation as EvidenceLink["relation"],
+        excerpt: link.excerpt,
+        start,
+        end: start + link.excerpt.length,
+      };
+    });
+    const supporting = evidence.filter((e) => e.relation === "supporting");
+    const opposing = evidence.filter((e) => e.relation === "opposing");
+    if (
+      (row.verdict === "supported" &&
+        (!supporting.length || opposing.length)) ||
+      (row.verdict === "contradicted" && !opposing.length) ||
+      (row.verdict === "partially_supported" && !supporting.length)
+    )
+      throw new ResearchError(
+        "Skeptic verdict conflicts with its evidence relationships.",
+      );
+    const flags = [
+      ...new Set([
+        ...(findings[index].flags ||
+          claimFlags(findings[index].claim, findings[index].excerpt)),
+        ...supporting.flatMap((e) =>
+          claimFlags(findings[index].claim, e.excerpt),
+        ),
+      ]),
+    ];
+    const modelVerdict = row.verdict as Review["verdict"];
+    const verdict =
+      modelVerdict === "supported" && flags.length
+        ? "partially_supported"
+        : modelVerdict;
+    const count = new Set(supporting.map((e) => e.sourceId)).size;
     return {
-      index: Number(row.index),
-      verdict: row.verdict as Review["verdict"],
+      index,
+      verdict,
+      modelVerdict,
       reasoning: text(row.reasoning, 900),
+      flags,
+      evidence,
+      supportScope:
+        count > 1
+          ? "multiple_sources_not_independently_verified"
+          : count === 1
+            ? "single_source"
+            : "no_support",
+      needsResearch: verdict !== "supported" || count < 2 || flags.length > 0,
     };
   });
   if (reviews.length !== findings.length)
@@ -184,29 +287,65 @@ export function validateReviews(value: unknown, findings: Finding[]): Review[] {
 export function validateReport(
   value: unknown,
   findings: Finding[],
+  reviews: Review[] = [],
 ): ReportBody {
   const row = record(value);
-  return {
-    summary: text(row.summary),
-    findings: list(row.findings).map((item) => {
-      const finding = record(item);
-      const indexes = list(finding.evidenceIndexes);
-      if (
-        indexes.some(
-          (index) =>
-            !Number.isInteger(index) ||
-            Number(index) < 0 ||
-            Number(index) >= findings.length,
-        )
+  const indexes = (value: unknown) => {
+    const refs = list(value);
+    if (
+      refs.some(
+        (i) =>
+          !Number.isInteger(i) || Number(i) < 0 || Number(i) >= findings.length,
       )
-        throw new ResearchError(
-          "Report contains an unknown evidence citation.",
-        );
-      return {
-        text: text(finding.text, 900),
-        evidenceIndexes: [...new Set(indexes as number[])],
-      };
+    )
+      throw new ResearchError("Report contains an unknown evidence citation.");
+    return [...new Set(refs as number[])];
+  };
+  const check = (content: string, refs: number[]) => {
+    const quotes = refs
+      .map(
+        (i) =>
+          findings[i].excerpt +
+          " " +
+          (reviews[i]?.evidence.map((e) => e.excerpt).join(" ") || ""),
+      )
+      .join(" ");
+    const flags = [...reportWarnings(content), ...claimFlags(content, quotes)];
+    if (flags.length)
+      throw new ResearchError(
+        "Report quality check failed: " + flags.join(" "),
+      );
+    if (
+      refs.some((i) => reviews[i] && reviews[i].verdict !== "supported") &&
+      !/uncertain|unverified|contradict|partial|unsupported|not established|cannot conclude|not supported/i.test(
+        content,
+      )
+    )
+      throw new ResearchError(
+        "Report must explicitly qualify conclusions citing uncertain or contradicted claims.",
+      );
+  };
+  const summary = text(row.summary);
+  const summaryEvidenceIndexes = indexes(row.summaryEvidenceIndexes);
+  check(summary, summaryEvidenceIndexes);
+  return {
+    summary,
+    summaryEvidenceIndexes,
+    findings: list(row.findings).map((item) => {
+      const f = record(item);
+      const refs = indexes(f.evidenceIndexes);
+      const content = text(f.text, 900);
+      check(content, refs);
+      return { text: content, evidenceIndexes: refs };
     }),
-    uncertainty: list(row.uncertainty).map((item) => text(item, 700)),
+    uncertainty: list(row.uncertainty).map((item) => {
+      const content = text(item, 700);
+      const warnings = reportWarnings(content);
+      if (warnings.length)
+        throw new ResearchError(
+          "Report quality check failed: " + warnings.join(" "),
+        );
+      return content;
+    }),
   };
 }

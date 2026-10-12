@@ -12,7 +12,7 @@ export function ResearchPanel({
     <section className="real-research" aria-label="Real research pipeline">
       <div className="research-gate">
         <div>
-          <span className="category">PHASE 2A · REAL RESEARCH</span>
+          <span className="category">PHASE 2B · EVIDENCE INTELLIGENCE</span>
           <h2>Explorer → Skeptic → Synthesizer</h2>
           <p>
             {data.enabled
@@ -48,6 +48,78 @@ export function ResearchPanel({
       )}
       {(view === "Evidence Network" || showAll) && (
         <div className="real-evidence">
+          <h3>Claim → evidence → source</h3>
+          <p>
+            Verdicts are AI assessments. Exact quote matching verifies
+            provenance, not truth. Single-source support needs independent
+            research.
+          </p>
+          {data.evidence.map((e) => (
+            <article className="research-source" key={e.id}>
+              <strong>{e.claim}</strong>
+              <p>
+                <span className="status">
+                  {e.verdict.replaceAll("_", " ")} · AI assessment
+                </span>
+              </p>
+              {!e.assessment_version && !e.flags ? (
+                <p>
+                  Legacy Phase 2A result · not reassessed. Mission #001 contains
+                  human-identified errors; its original output is preserved.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    {e.support_scope?.replaceAll("_", " ")} ·{" "}
+                    {e.needs_research
+                      ? "Further research needed"
+                      : "Human review required"}
+                  </p>
+                  <small>
+                    Model verdict:{" "}
+                    {e.model_verdict?.replaceAll("_", " ") || "Awaiting review"}{" "}
+                    · checks version {e.assessment_version || "2B extraction"}
+                  </small>
+                  {JSON.parse(e.flags || "[]").map((flag: string) => (
+                    <p key={flag}>Review flag: {flag}</p>
+                  ))}
+                </>
+              )}
+              <p>{e.reasoning}</p>
+              {(data.links || [])
+                .filter((l) => l.evidence_id === e.id)
+                .map((link, i) => {
+                  const source = data.sources.find(
+                    (s) => s.id === link.sourceId,
+                  );
+                  return (
+                    <div className="research-finding" key={i}>
+                      <span className="category">
+                        {link.relation} evidence →{" "}
+                        {source?.title || "Source outside current window"}
+                      </span>
+                      <blockquote>{link.excerpt}</blockquote>
+                      <small>
+                        Excerpt characters {link.start}–{link.end} · UTF-16, end
+                        exclusive
+                      </small>
+                      {source && (
+                        <p>
+                          <a href={source.url} target="_blank" rel="noreferrer">
+                            Original source ↗
+                          </a>{" "}
+                          · Retrieved{" "}
+                          {new Date(source.retrieved_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              {!e.assessment_version && !e.flags && (
+                <blockquote>{e.excerpt}</blockquote>
+              )}
+            </article>
+          ))}
           <h3>Retrieved sources & evidence</h3>
           {!data.sources.length && <p>No real sources retrieved yet.</p>}
           {data.sources.map((s) => (
@@ -61,19 +133,14 @@ export function ResearchPanel({
               </small>
               <details>
                 <summary>Retrieved excerpt and provenance</summary>
-                <p>{s.excerpt}</p>
+                <p className="report-content">{s.excerpt}</p>
+                <small>
+                  Complete retained excerpt · bounded to 4,500 characters, not
+                  the full article. HTML text extraction can lose formula
+                  formatting.
+                </small>
                 <small>SHA-256: {s.content_hash}</small>
               </details>
-              {data.evidence
-                .filter((e) => e.source_id === s.id)
-                .map((e) => (
-                  <div className="research-finding" key={e.id}>
-                    <strong>{e.claim}</strong>
-                    <blockquote>{e.excerpt}</blockquote>
-                    <span className="status">{e.verdict} · AI assessment</span>
-                    <p>{e.reasoning}</p>
-                  </div>
-                ))}
             </article>
           ))}
         </div>
@@ -112,6 +179,29 @@ export function ResearchPanel({
       )}
       {(view === "Colony Activity" || showAll) && (
         <div>
+          <h3>Actual AI usage</h3>
+          <p>
+            Unknown means the provider did not supply a metric or the run
+            predates tracking. Call reservations are not token counts. No neuron
+            or cost estimate is inferred.
+          </p>
+          {!(data.usage || []).length && <p>No AI call records.</p>}
+          {(data.usage || []).map((u, i) => (
+            <article className="research-source" key={i}>
+              <strong>
+                Mission {u.mission_id.slice(0, 8)} · {u.role || "Legacy run"}
+              </strong>
+              <p>
+                {u.ai_calls}/3 call reservations for mission ·{" "}
+                {u.status || "metrics unavailable"}
+              </p>
+              <p>
+                Input tokens: {u.prompt_tokens ?? "unknown"} · Completion
+                tokens: {u.completion_tokens ?? "unknown"} · Total tokens:{" "}
+                {u.total_tokens ?? "unknown"}
+              </p>
+            </article>
+          ))}
           <h3>Real agent activity</h3>
           {!data.activity.length && <p>No real agent activity recorded yet.</p>}
           {data.activity.map((a) => (

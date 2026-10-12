@@ -73,13 +73,19 @@ export default {
             "SELECT * FROM sources WHERE is_demo=0 ORDER BY retrieved_at DESC LIMIT 90",
           ),
           env.DB.prepare(
-            "SELECT * FROM evidence WHERE is_demo=0 ORDER BY rowid DESC LIMIT 150",
+            "SELECT e.id,e.mission_id,e.source_id,e.claim,e.excerpt,COALESCE(a.verdict,e.verdict) AS verdict,COALESCE(a.reasoning,e.reasoning) AS reasoning,a.model_verdict,COALESCE(a.flags,e.explorer_flags) AS flags,a.support_scope,a.needs_research,a.assessment_version FROM evidence e LEFT JOIN claim_assessments a ON a.evidence_id=e.id WHERE e.is_demo=0 ORDER BY e.rowid DESC LIMIT 150",
           ),
           env.DB.prepare(
             "SELECT * FROM reports WHERE is_demo=0 ORDER BY created_at DESC LIMIT 30",
           ),
           env.DB.prepare(
             "SELECT * FROM agent_activity ORDER BY created_at DESC,rowid DESC LIMIT 150",
+          ),
+          env.DB.prepare(
+            "SELECT l.evidence_id,l.source_id AS sourceId,l.relation,l.excerpt,l.start_offset AS start,l.end_offset AS end FROM claim_source_links l JOIN evidence e ON e.id=l.evidence_id WHERE e.is_demo=0 ORDER BY e.rowid DESC,l.rowid LIMIT 600",
+          ),
+          env.DB.prepare(
+            "SELECT r.mission_id,r.ai_calls,u.role,u.status,u.prompt_tokens,u.completion_tokens,u.total_tokens FROM mission_runs r LEFT JOIN ai_usage u ON u.run_id=r.id ORDER BY r.rowid DESC,u.rowid LIMIT 90",
           ),
         ]);
         return json({
@@ -92,6 +98,8 @@ export default {
           evidence: results[1].results,
           reports: results[2].results,
           activity: results[3].results,
+          links: results[4].results,
+          usage: results[5].results,
         });
       }
       const start = path.match(/^\/api\/missions\/([a-f0-9-]{36})\/start$/);

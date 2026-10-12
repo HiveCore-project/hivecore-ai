@@ -44,6 +44,12 @@ function database() {
       "utf8",
     ),
   );
+  sqlite.exec(
+    readFileSync(
+      new URL("../migrations/0003_evidence_intelligence.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   function prepare(sql: string) {
     let params: any[] = [];
     const statement = {
@@ -106,6 +112,9 @@ const outputs = [
       {
         index: 0,
         verdict: "supported",
+        evidence: [
+          { sourceId: source.id, relation: "supporting", excerpt: quote },
+        ],
         reasoning:
           "The quote supports this narrow claim; it does not compare technology performance.",
       },
@@ -113,6 +122,7 @@ const outputs = [
   },
   {
     summary: "The retrieved text describes energy storage.",
+    summaryEvidenceIndexes: [0],
     findings: [
       {
         text: "Storage can shift energy use across time.",
@@ -354,7 +364,20 @@ describe("real pipeline with mocked AI and in-memory D1", () => {
       const output = role.includes("HIVECORE EXPLORER")
         ? { findings: [{ ...finding, sourceId: data.sources[0].id }] }
         : role.includes("HIVECORE SKEPTIC")
-          ? outputs[1]
+          ? {
+              reviews: [
+                {
+                  ...outputs[1].reviews![0],
+                  evidence: [
+                    {
+                      sourceId: data.sources[0].id,
+                      relation: "supporting",
+                      excerpt: quote,
+                    },
+                  ],
+                },
+              ],
+            }
           : outputs[2];
       return {
         choices: [
@@ -382,8 +405,19 @@ describe("real pipeline with mocked AI and in-memory D1", () => {
     expect(snapshot.usedToday).toBe(1);
     expect(snapshot.sources).toHaveLength(1);
     expect(snapshot.evidence).toHaveLength(1);
+    expect(snapshot.evidence[0].assessment_version).toBe("2B");
+    expect(snapshot.links).toHaveLength(2);
+    expect(snapshot.usage).toHaveLength(3);
+    expect(snapshot.usage.every((u: any) => u.total_tokens === null)).toBe(
+      true,
+    );
+    expect(JSON.stringify(snapshot)).not.toContain(env.LIVE_APPROVAL_ID);
     expect(snapshot.reports[0].body).toContain(source.url);
     expect(ai.run).toHaveBeenCalledTimes(3);
+    const synthesis = JSON.parse(
+      (ai.run.mock.calls[2] as any[])[1].messages[1].content,
+    ).untrustedData;
+    expect(synthesis.sources[0].excerpt).toBe(source.excerpt);
   });
   it("never calls AI if source retrieval fails", async () => {
     const { env, db, ai, sqlite } = setup();
@@ -476,6 +510,63 @@ describe("real pipeline with mocked AI and in-memory D1", () => {
     expect(sqlite.prepare("SELECT count(*) AS n FROM sources").get()?.n).toBe(
       1,
     );
+  });
+  it("persists actual token metrics separately from reserved calls", async () => {
+    const { env, db, ai, sqlite } = setup();
+    ai.run.mockImplementation(async () => ({
+      usage: { prompt_tokens: 80, completion_tokens: 20, total_tokens: 100 },
+      choices: [
+        {
+          finish_reason: "stop",
+          message: {
+            content: JSON.stringify(outputs[ai.run.mock.calls.length - 1]),
+          },
+        },
+      ],
+    }));
+    const m = await draft(db);
+    await runResearch(env, m, await reserveMission(env, m.id), { retrieve });
+    expect(
+      sqlite.prepare("SELECT SUM(total_tokens) AS total FROM ai_usage").get()
+        ?.total,
+    ).toBe(300);
+    expect(
+      sqlite.prepare("SELECT ai_calls FROM mission_runs").get()?.ai_calls,
+    ).toBe(3);
+  });
+  it("fails without saving a report on a false absence assertion", async () => {
+    const { env, db, ai, sqlite } = setup();
+    ai.run.mockImplementation(async () => ({
+      choices: [
+        {
+          finish_reason: "stop",
+          message: {
+            content: JSON.stringify(
+              ai.run.mock.calls.length === 3
+                ? {
+                    ...outputs[2],
+                    uncertainty: [
+                      "The source does not provide data on efficiency.",
+                    ],
+                  }
+                : outputs[ai.run.mock.calls.length - 1],
+            ),
+          },
+        },
+      ],
+    }));
+    const m = await draft(db);
+    await runResearch(env, m, await reserveMission(env, m.id), { retrieve });
+    expect(sqlite.prepare("SELECT error FROM missions").get()?.error).toContain(
+      "absence assertion",
+    );
+    expect(sqlite.prepare("SELECT count(*) AS n FROM reports").get()?.n).toBe(
+      0,
+    );
+    expect(
+      sqlite.prepare("SELECT count(*) AS n FROM claim_assessments").get()?.n,
+    ).toBe(1);
+    expect(ai.run).toHaveBeenCalledTimes(3);
   });
   it("fails closed on fabricated quotes", async () => {
     const { env, db, ai, sqlite } = setup();

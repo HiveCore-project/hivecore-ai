@@ -2,6 +2,8 @@
 
 Implementation uses native `env.AI.run('@cf/zai-org/glm-4.7-flash', ...)` only. No OpenAI/Claude APIs, API keys in frontend code, paid gateways, automatic purchases or public deployment. **No live inference has been performed during implementation.** Successful mocked tests do not certify remote account/model availability or report quality; those require the separately approved live test.
 
+Phase 2B supersedes the review/report schemas below: see [evidence intelligence and Mission #001 corrections](PHASE_2B.md). The one-use live approval procedure and all safety caps remain unchanged. No live test is authorized as part of Phase 2B implementation.
+
 ## Pipeline and truthful results
 
 1. Create a normal mission draft with up to three optional permitted source URLs. A draft has no AI or network-retrieval side effects.
@@ -63,7 +65,7 @@ npm run build
 npm run test:integration
 ```
 
-Unit/pipeline tests mock AI and fetch, using actual migration SQL against isolated in-memory SQLite. They do not use real sources, inference or local mission quotas. The integration command creates one labeled draft in local D1 and verifies the live-start lock without inference. Test fixtures never become real reports.
+Unit/pipeline tests mock AI and fetch, using actual migration SQL against isolated in-memory SQLite. They do not use real sources, inference or local mission quotas. The integration command is now read-only: it verifies the locked API and persisted provenance without creating drafts or requesting starts. Test fixtures never become real reports.
 
 ## One real test — only AFTER explicit user approval
 

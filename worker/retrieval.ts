@@ -61,7 +61,17 @@ export function extractArticle(html: string) {
   const paragraphs = DomUtils.getElementsByTagName("p", root.children)
     .map((el) => DomUtils.textContent(el).replace(/\s+/g, " ").trim())
     .filter(Boolean);
-  const text = paragraphs.join("\n").slice(0, LIMITS.sourceChars);
+  const allText = paragraphs.join("\n");
+  let text = allText.slice(0, LIMITS.sourceChars);
+  // Prefer complete sentences inside the fixed cap. All roles receive exactly
+  // this retained text; there is no additional per-role truncation.
+  if (allText.length > LIMITS.sourceChars) {
+    const last = [...text.matchAll(/[.!?](?:\[\d+\])*(?=\s|$)/g)].at(-1);
+    const end = last ? last.index! + last[0].length : -1;
+    if (end >= 100) text = text.slice(0, end);
+    else if (text.lastIndexOf(" ") > 100)
+      text = text.slice(0, text.lastIndexOf(" "));
+  }
   if (text.length < 100)
     throw new ResearchError(
       "The source did not contain enough readable article text.",

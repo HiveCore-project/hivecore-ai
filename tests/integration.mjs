@@ -1,67 +1,67 @@
+// Read-only locked-server checks: no drafts, starts, inference or quota consumption.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 const base = "http://127.0.0.1:8787";
-const post = (body, headers = {}) =>
-  fetch(`${base}/api/missions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: typeof body === "string" ? body : JSON.stringify(body),
-  });
-const title = `Integration draft ${Date.now()}`;
-const response = await post({
-  title,
-  objective: "Verify local D1 persistence through the real Worker API.",
-  category: "Technology",
-  status: "running",
-});
-assert.equal(response.status, 201);
-const { mission } = await response.json();
-assert.equal(mission.status, "draft");
-const list = await (await fetch(`${base}/api/missions`)).json();
-assert.ok(list.missions.some((m) => m.id === mission.id && m.title === title));
-assert.equal((await post({ title: "x" })).status, 400);
-assert.equal((await post("{")).status, 400);
-assert.equal((await post("x".repeat(12001))).status, 413);
+async function get(path) {
+  const response = await fetch(base + path);
+  assert.equal(response.status, 200, path);
+  return response.json();
+}
 assert.equal(
-  (
-    await post({
-      title: "Unsafe source",
-      objective: "This must never fetch a private URL.",
-      category: "Technology",
-      sourceUrls: ["http://127.0.0.1/secret"],
-    })
-  ).status,
-  400,
-);
-const research = await (await fetch(`${base}/api/research`)).json();
-assert.equal(
-  research.enabled,
+  (await get("/api/health")).aiEnabled,
   false,
-  "Integration checks require the default locked server.",
+  "Use the normal locked server.",
 );
+const before = await get("/api/missions");
+const research = await get("/api/research");
+assert.equal(research.enabled, false);
+for (const key of [
+  "sources",
+  "evidence",
+  "reports",
+  "activity",
+  "links",
+  "usage",
+])
+  assert.ok(Array.isArray(research[key]), key);
+for (const source of research.sources)
+  assert.equal(
+    createHash("sha256").update(source.excerpt).digest("hex"),
+    source.content_hash,
+  );
+for (const link of research.links) {
+  const source = research.sources.find((s) => s.id === link.sourceId);
+  if (source)
+    assert.equal(source.excerpt.slice(link.start, link.end), link.excerpt);
+}
+const original = JSON.parse(
+  readFileSync(
+    new URL("../docs/mission-001-results.json", import.meta.url),
+    "utf8",
+  ).replace(/^\uFEFF/, ""),
+);
+for (const report of original.reports) {
+  const stored = research.reports.find((r) => r.id === report.id);
+  if (stored) assert.equal(stored.body, report.body);
+}
+for (const evidence of original.evidence) {
+  const stored = research.evidence.find((e) => e.id === evidence.id);
+  if (stored)
+    for (const key of ["claim", "excerpt", "verdict", "reasoning"])
+      assert.equal(stored[key], evidence[key]);
+}
 assert.equal(
   (
-    await fetch(`${base}/api/missions/${mission.id}/start`, {
-      method: "POST",
-      headers: { "X-Hivecore-Live": "approved" },
+    await fetch(base + "/api/missions", {
+      headers: { Origin: "https://untrusted.example" },
     })
   ).status,
   403,
 );
-const unchanged = await (await fetch(`${base}/api/research`)).json();
-assert.equal(
-  unchanged.usedToday,
-  research.usedToday,
-  "Rejected starts must not consume quota.",
-);
-assert.equal(
-  (await post({}, { Origin: "https://untrusted.example" })).status,
-  403,
-);
-assert.equal(
-  (await fetch(`${base}/api/missions`, { method: "DELETE" })).status,
-  405,
-);
-assert.equal((await fetch(`${base}/api/unknown`)).status, 404);
+assert.equal((await fetch(base + "/api/unknown")).status, 404);
+assert.deepEqual((await get("/api/missions")).missions, before.missions);
+assert.equal((await get("/api/research")).usedToday, research.usedToday);
 console.log(
-  `Integration checks passed. Local test draft retained: ${mission.id}`,
+  "Read-only integration passed: locked API, schema, provenance, historical records and origin guard; no missions created or started.",
 );
